@@ -1,0 +1,9 @@
+name: lending_app
+
+packages:
+  - app
+  - packages/*
+
+scripts:
+  analyze:
+    exec: dart analyze .

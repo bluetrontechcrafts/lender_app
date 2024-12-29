@@ -1,0 +1,4 @@
+# melos_managed_dependency_overrides: lender_service
+dependency_overrides:
+  lender_service:
+    path: ..\\packages\\lender_service
