@@ -4,6 +4,8 @@ part 'schema.realm.dart';
 
 enum Loantype { flat, simple, reducing, compound }
 
+enum RepaymentFrequency { daily, weekly, monthly }
+
 @RealmModel()
 class _LineRawData {
   @PrimaryKey()
