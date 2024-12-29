@@ -1,18 +1,56 @@
 // Importing schema.dart to use the RepaymentFrequency enum and other schema definitions.
+import 'dart:math';
+
 import 'schema.dart';
 
 abstract class BaseLoanCalculator {
-  final double principal;
-  final double interest;
-  final int tenure;
-  final RepaymentFrequency frequency;
+  double _principal;
+  double _interest;
+  int _tenure;
+  RepaymentFrequency _frequency;
+
+  // Getters for private fields
+  double get principal => _principal;
+  double get interest => _interest;
+  int get tenure => _tenure;
+  RepaymentFrequency get frequency => _frequency;
 
   BaseLoanCalculator({
-    required this.principal,
-    required this.interest,
-    required this.tenure,
-    required this.frequency,
-  });
+    required double principal,
+    required double interest,
+    required int tenure,
+    required RepaymentFrequency frequency,
+  })  : _principal = principal,
+        _interest = interest,
+        _tenure = tenure,
+        _frequency = frequency;
+
+  BaseLoanCalculator setPrincipal(double principal) {
+    _principal = principal;
+    return this;
+  }
+
+  BaseLoanCalculator setInterest(double interest) {
+    _interest = interest;
+    return this;
+  }
+
+  BaseLoanCalculator setInterestByAmountPer100(double interest) {
+    _interest = interest / 100;
+    return this;
+  }
+
+  BaseLoanCalculator setTenure(int tenure) {
+    _tenure = tenure;
+    return this;
+  }
+
+  BaseLoanCalculator setFrequency(RepaymentFrequency frequency) {
+    _frequency = frequency;
+    return this;
+  }
+
+  LoanSummary getSummary();
 }
 
 /// A calculator for loans with flat interest rate.
@@ -30,6 +68,32 @@ class FlatInterestCalculator extends BaseLoanCalculator {
     required super.tenure,
     required super.frequency,
   });
+
+  @override
+  LoanSummary getSummary() {
+    double totalInterest = principal * (interest / 100) * tenure;
+    double totalRepayment = principal + totalInterest;
+
+    List<RepaymentSchedule> schedules = [];
+    double monthlyRepayment = totalRepayment / tenure;
+
+    DateTime currentDate = DateTime.now();
+    for (int i = 0; i < tenure; i++) {
+      schedules.add(RepaymentSchedule(
+        date: currentDate.add(Duration(days: 30 * (i + 1))),
+        amount: monthlyRepayment,
+        principal: principal / tenure,
+        interest: totalInterest / tenure,
+      ));
+    }
+
+    return LoanSummary(
+      schedules: schedules,
+      totalPrincipal: principal,
+      totalInterest: totalInterest,
+      totalRepayment: totalRepayment,
+    );
+  }
 }
 
 /// A loan calculator that calculates interest using the simple interest formula.
@@ -46,6 +110,32 @@ class SimpleInterestCalculator extends BaseLoanCalculator {
     required super.tenure,
     required super.frequency,
   });
+
+  @override
+  LoanSummary getSummary() {
+    double totalInterest = principal * (interest / 100) * tenure;
+    double totalRepayment = principal + totalInterest;
+
+    List<RepaymentSchedule> schedules = [];
+    double monthlyRepayment = totalRepayment / tenure;
+
+    DateTime currentDate = DateTime.now();
+    for (int i = 0; i < tenure; i++) {
+      schedules.add(RepaymentSchedule(
+        date: currentDate.add(Duration(days: 30 * (i + 1))),
+        amount: monthlyRepayment,
+        principal: principal / tenure,
+        interest: totalInterest / tenure,
+      ));
+    }
+
+    return LoanSummary(
+      schedules: schedules,
+      totalPrincipal: principal,
+      totalInterest: totalInterest,
+      totalRepayment: totalRepayment,
+    );
+  }
 }
 
 /// A calculator for loans with reducing interest rate.
@@ -62,6 +152,39 @@ class ReducingInterestCalculator extends BaseLoanCalculator {
     required super.tenure,
     required super.frequency,
   });
+
+  @override
+  LoanSummary getSummary() {
+    double remainingPrincipal = principal;
+    double totalInterest = 0;
+    List<RepaymentSchedule> schedules = [];
+
+    DateTime currentDate = DateTime.now();
+    for (int i = 0; i < tenure; i++) {
+      double interestForPeriod = remainingPrincipal * (interest / 100) / 12;
+      double principalRepayment = principal / tenure;
+      double totalRepayment = principalRepayment + interestForPeriod;
+
+      schedules.add(RepaymentSchedule(
+        date: currentDate.add(Duration(days: 30 * (i + 1))),
+        amount: totalRepayment,
+        principal: principalRepayment,
+        interest: interestForPeriod,
+      ));
+
+      remainingPrincipal -= principalRepayment;
+      totalInterest += interestForPeriod;
+    }
+
+    double totalRepaymentAmount = principal + totalInterest;
+
+    return LoanSummary(
+      schedules: schedules,
+      totalPrincipal: principal,
+      totalInterest: totalInterest,
+      totalRepayment: totalRepaymentAmount,
+    );
+  }
 }
 
 /// A calculator for loans with compound interest rate.
@@ -80,4 +203,62 @@ class CompoundInterestCalculator extends BaseLoanCalculator {
     required super.tenure,
     required super.frequency,
   });
+
+  @override
+  LoanSummary getSummary() {
+    double totalRepayment =
+        pow(principal * (1 + (interest / 100) / 12), tenure).toDouble();
+    double totalInterest = totalRepayment - principal;
+
+    List<RepaymentSchedule> schedules = [];
+    double monthlyRepayment = totalRepayment / tenure;
+
+    DateTime currentDate = DateTime.now();
+    for (int i = 0; i < tenure; i++) {
+      schedules.add(RepaymentSchedule(
+        date: currentDate.add(Duration(days: 30 * (i + 1))),
+        amount: monthlyRepayment,
+        principal: principal / tenure,
+        interest: totalInterest / tenure,
+      ));
+    }
+
+    return LoanSummary(
+      schedules: schedules,
+      totalPrincipal: principal,
+      totalInterest: totalInterest,
+      totalRepayment: totalRepayment,
+    );
+  }
+}
+
+class RepaymentSchedule {
+  final DateTime date;
+  final double amount;
+  final double principal;
+  final double interest;
+
+  RepaymentSchedule({
+    required this.date,
+    required this.amount,
+    required this.principal,
+    required this.interest,
+  });
+}
+
+class LoanSummary {
+  final double totalPrincipal;
+  final double totalInterest;
+  final double totalRepayment;
+
+  final List<RepaymentSchedule> schedules;
+
+  LoanSummary({
+    required this.schedules,
+    required this.totalPrincipal,
+    required this.totalInterest,
+    required this.totalRepayment,
+  });
+
+  double get totalProfit => totalInterest;
 }
