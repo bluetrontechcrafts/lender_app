@@ -1,5 +1,4 @@
 import 'package:flutter/widgets.dart';
-
 import 'data_repository.dart';
 
 class LenderProvider extends InheritedWidget {
@@ -24,3 +23,4 @@ class LenderProvider extends InheritedWidget {
   @override
   bool updateShouldNotify(LenderProvider oldWidget) => false;
 }
+
